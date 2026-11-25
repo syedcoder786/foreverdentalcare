@@ -146,9 +146,10 @@ Nothing on the public site is hard-coded. What the admin edits, and where:
 Every admin change is written to an **audit log** (shown on the dashboard, `GET /api/admin/audit-logs`).
 
 **Image uploads.** `POST /api/admin/uploads` accepts JPEG, PNG, WebP or GIF up to 5 MB. Files are validated by their **content** (magic bytes), not their name, and SVG is rejected. They're stored outside the database behind the `FileStorage` interface:
-- `LocalFileStorage` writes to `UPLOAD_DIR` (default `./uploads`) and serves files from `/api/public/files/{name}`.
-- To use Cloudinary or S3, implement `FileStorage` and select it with `STORAGE_PROVIDER`.
-- Back up the upload folder together with the database.
+- `LocalFileStorage` (`STORAGE_PROVIDER=local`, the default) writes to `UPLOAD_DIR` (default `./uploads`) and serves files from `/api/public/files/{name}`. Back up the upload folder together with the database.
+- `CloudinaryFileStorage` (`STORAGE_PROVIDER=cloudinary`) uploads to Cloudinary and saves the absolute `https://res.cloudinary.com/...` URL, so images are served by Cloudinary's CDN. Set `CLOUDINARY_URL=cloudinary://<api_key>:<api_secret>@<cloud_name>` in `backend/.env` (never commit it) and optionally `CLOUDINARY_FOLDER` (default `forever-dental-care`). The backend refuses to start if the provider is `cloudinary` and the URL is missing.
+- Switching providers doesn't move existing images: images uploaded locally keep their `/api/public/files/...` URLs and need the old upload folder (or re-uploading) to keep working.
+- To add S3 or another store, implement `FileStorage` and select it with `STORAGE_PROVIDER`.
 
 ## 7. API overview
 
