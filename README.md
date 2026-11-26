@@ -5,7 +5,7 @@ A dental clinic website with online appointment requests and an admin dashboard.
 | Part | Stack |
 |---|---|
 | `frontend/` | React 19, TypeScript, Vite 6, Tailwind CSS 4, React Router 7, React Query 5, React Hook Form + Zod, Axios, Lucide icons |
-| `backend/` | Java 21, Spring Boot 3.5 (Web, Data JPA, Security, Validation), JWT (jjwt), Flyway, Lombok, Maven |
+| `backend/` | Java 21, Spring Boot 3.5 (Web, Data JPA, Security, OAuth2 Resource Server for JWT, Validation), Flyway, Lombok, Maven |
 | Database | PostgreSQL 16 (Docker Compose). Tests run on H2 in PostgreSQL mode, using the same Flyway migrations. |
 
 > **Placeholders:** all clinic-specific content is a clearly marked placeholder. Replace it before going live (see "Replacing placeholder content" below).
@@ -92,7 +92,7 @@ dental-clinic/
       dto/          request/ and response/ records (entities are never exposed)
       mapper/       entity <-> DTO mappers
       exception/    GlobalExceptionHandler (@RestControllerAdvice) + domain exceptions
-      security/     SecurityConfig, JWT service/filter, refresh cookie, rate limiter
+      security/     SecurityConfig (Spring Security login + JWT resource server), UserDetailsService, JWT issuing, refresh cookie, rate limiter
       enums/        AppointmentStatus (with transition rules), Role
       util/         phone validation/normalisation
     src/main/resources/db/migration/   V1 schema, V2 placeholder seed data
@@ -203,7 +203,8 @@ Rescheduling keeps the same doctor and releases the old time.
 
 - **Timezone.** Dates and times are clinic-local wall-clock values (`DATE`/`TIME`). Every "today" and "now" check uses a `Clock` in `APP_TIMEZONE`. Audit timestamps are UTC.
 - **Authentication.**
-  - The access token is a short-lived JWT kept in memory only.
+  - Login goes through Spring Security's `AuthenticationManager` (`DaoAuthenticationProvider` + `AdminUserDetailsService`).
+  - The access token is a short-lived HS256 JWT kept in memory only. It's issued with Spring's `JwtEncoder` and validated by the OAuth2 resource server (signature, issuer, expiry) on `/api/admin/**`.
   - The refresh token lives in an HttpOnly, Secure, SameSite=Strict cookie. It's hashed in the database and rotated on every use, and reusing an old one revokes all of that admin's sessions.
   - Passwords are hashed with BCrypt.
 - **Rate limiting.** Booking, login and refresh are limited per client IP (in memory, single instance).
