@@ -151,6 +151,33 @@ Every admin change is written to an **audit log** (shown on the dashboard, `GET 
 - Switching providers doesn't move existing images: images uploaded locally keep their `/api/public/files/...` URLs and need the old upload folder (or re-uploading) to keep working.
 - To add S3 or another store, implement `FileStorage` and select it with `STORAGE_PROVIDER`.
 
+### Patient sign-in with WhatsApp
+
+Patients sign in with their mobile number only. There is no password and no separate sign-up form:
+
+1. On **Book appointment** (or the sign-in prompt that appears about 20 seconds after the site opens), the patient enters their mobile number and gets a 6-digit code on WhatsApp.
+2. A returning patient is signed in right away. A new number is asked for a name, which creates the profile.
+3. **My profile** (`/profile`) shows their details and appointments, with a button to book again. Bookings are linked to the profile, so name and phone are filled in automatically.
+
+**Setup:** Admin → Settings → **WhatsApp sign-in**. Enter the Phone number ID, a permanent access token, and the name and language of an approved **Authentication** template with a **Copy code** button, then use **Send test**. The token is stored on the server and never returned to the browser (only its last 4 characters are shown).
+
+**Security:**
+- Codes expire after 5 minutes. Each code allows 5 wrong attempts, a new one can be requested after 30 seconds, and each number gets at most 5 codes per hour, plus per-IP limits. Only an HMAC of each code is stored.
+- Sessions use Spring Security with JWT, like the admin login: a short-lived access token with role `PATIENT` kept in memory, plus a rotating refresh token in an HttpOnly cookie scoped to `/api/patient-auth`.
+- **Local development:** with `OTP_LOG_CODES=true` and WhatsApp not set up, codes are written to the backend log instead. Never enable this in production.
+
+### WhatsApp appointment messages and marketing
+
+**Admin → WhatsApp** has three tabs:
+- **Setup:** the WhatsApp connection and the sign-in code template.
+- **Template names:** nothing is added automatically. Create templates in WhatsApp Manager, then save each name and language here (or with *+ Add a new template name…* in any template picker). Saved names are reused across appointment and marketing messages; a name in use can't be removed.
+- **Appointment messages:** add a message for any of *Appointment received*, *Confirmed*, *Cancelled* and *Rescheduled* (one each), choose a saved template name, and pick what fills each placeholder. The options are patient name, treatment, doctor, date, time, booking reference, clinic details or your own text. Header text, media headers (image/video/document link) and URL or coupon-code buttons are supported. The chosen template is read live from your WhatsApp Business Account, so the editor shows a preview with exactly the placeholders each one has. Messages are sent in the background after the change is saved, and a WhatsApp error never blocks a booking.
+- **Marketing:** add any number of promotional templates and send one as a campaign to every patient (all patients are included; there is no opt-in checkbox). Progress and sent/failed counts are shown per campaign.
+
+Every template has **Send test**, which sends it with example data.
+
+The older public booking endpoint (`POST /api/public/appointments`) still works for API clients. The website uses the signed-in `POST /api/patient/appointments`.
+
 ## 7. API overview
 
 Every response uses the same envelope: `{ success, message?, data?, errors?, timestamp }`.
