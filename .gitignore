@@ -5,6 +5,8 @@
 backend/.env
 # Database connection saved from Admin -> Database (holds the database password)
 db-connection.json
+# Image storage saved from Admin -> Image storage (holds the Cloudinary API secret)
+storage-connection.json
 frontend/.env
 frontend/.env.local
 

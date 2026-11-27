@@ -148,8 +148,9 @@ Every admin change is written to an **audit log** (shown on the dashboard, `GET 
 **Image uploads.** `POST /api/admin/uploads` accepts JPEG, PNG, WebP or GIF up to 5 MB. Files are validated by their **content** (magic bytes), not their name, and SVG is rejected. They're stored outside the database behind the `FileStorage` interface:
 - `LocalFileStorage` (`STORAGE_PROVIDER=local`, the default) writes to `UPLOAD_DIR` (default `./uploads`) and serves files from `/api/public/files/{name}`. Back up the upload folder together with the database.
 - `CloudinaryFileStorage` (`STORAGE_PROVIDER=cloudinary`) uploads to Cloudinary and saves the absolute `https://res.cloudinary.com/...` URL, so images are served by Cloudinary's CDN. Set `CLOUDINARY_URL=cloudinary://<api_key>:<api_secret>@<cloud_name>` in `backend/.env` (never commit it) and optionally `CLOUDINARY_FOLDER` (default `forever-dental-care`). The backend refuses to start if the provider is `cloudinary` and the URL is missing.
-- Switching providers doesn't move existing images: images uploaded locally keep their `/api/public/files/...` URLs and need the old upload folder (or re-uploading) to keep working.
-- To add S3 or another store, implement `FileStorage` and select it with `STORAGE_PROVIDER`.
+- **Admin → Image storage** lets an admin switch between local disk and Cloudinary at runtime: paste a `CLOUDINARY_URL` (or type the cloud name, API key and API secret), press **Test connection** (it calls Cloudinary's ping and usage APIs), then save with their admin password. The settings are saved to `storage-connection.json` (`STORAGE_CONFIG_FILE`, git-ignored, holds the API secret) and override `STORAGE_PROVIDER` / `CLOUDINARY_URL`; **Go back to .env settings** deletes the file. The secret is never sent back to the browser.
+- Switching providers doesn't move existing images: images uploaded locally keep their `/api/public/files/...` URLs and are still served from the upload folder after a switch to Cloudinary, so keep that folder.
+- To add S3 or another store, implement `FileStorage` and route to it from `SwitchableFileStorage`.
 
 ### Patient sign-in with WhatsApp
 
